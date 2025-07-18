@@ -6,7 +6,7 @@ pragma solidity ^0.8.20;
  * @dev Interface for EventChainContract that manages ticket minting, validation, metadata updates,
  * maximum resale price settings, and burning expired tickets.
  */
-interface IEventChainContract {
+interface IEventContract {
 
     /**
      * @dev Mints a new ticket and assigns it to the specified address.
