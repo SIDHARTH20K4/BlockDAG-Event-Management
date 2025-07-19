@@ -1,201 +1,178 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/common/ERC2981.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "./IEventChainContract.sol";
 
-contract EventContract is ERC721URIStorage, ERC2981, Ownable, ReentrancyGuard, Pausable {
-    struct Ticket {
-        address owner;
-        string eventDetails;
-        uint256 originalPrice;
-        uint256 expirationDate;
-        uint256 maxResalePrice;
-        string metadataURI;
-        address[] ownershipHistory;
+contract EventContract is ERC721, ERC721URIStorage, ERC721Burnable, Ownable, IEventChainContract {
+
+    // Counter to keep track of token IDs
+    uint256 private ticketIdCounter;
+
+    // Stores details of each ticket by ID
+    struct TicketInfo {
+        string eventInfo;               // Description of the event
+        uint256 basePrice;              // Original price of the ticket
+        uint256 expiryTimestamp;        // Timestamp after which the ticket is invalid
+        address[] pastOwners;           // List of all previous ticket holders
+        bool usedStatus;                // Marks whether ticket was validated at the event
     }
 
-    mapping(string => Ticket) public tickets;
-    uint256 public royaltyPercentage = 5; // 5% default royalty
+    // Maps tokenId to its ticket details
+    mapping(uint256 => TicketInfo) private ticketRecords;
 
-    event TicketMinted(
-        string indexed uniqueID,
-        address indexed owner,
-        string eventDetails,
-        uint256 originalPrice,
-        uint256 expirationDate
-    );
+    // Maps tokenId to its maximum allowed resale price
+    mapping(uint256 => uint256) public resalePriceLimit;
 
-    event TicketTransferred(
-        string indexed uniqueID,
-        address indexed from,
-        address indexed to,
-        uint256 resalePrice
-    );
+    constructor(address contractOwner)
+        ERC721("EventChainTickets", "ECT")
+        Ownable(contractOwner)
+    {}
 
-    event TicketMetadataUpdated(uint256 indexed tokenId, string newURI);
-    event RoyaltyInfoChanged(address receiver, uint96 feeBasisPoints);
-    event RoyaltyPercentageChanged(uint256 newPercentage);
+    /**
+     * @notice Mints a new ticket with given data
+     * @param recipient Address that will own the ticket
+     * @param metadataURI Token metadata URI
+     * @param eventInfo Description of the event
+     * @param basePrice Price set for the ticket
+     * @param expiryTimestamp Expiry time after which ticket is invalid
+     */
+    function safeMint(address recipient, string memory metadataURI, string memory eventInfo, uint256 basePrice, uint256 expiryTimestamp) public override {
+        uint256 newTicketId = ticketIdCounter;
+        ticketIdCounter += 1;
+        _safeMint(recipient, newTicketId);
+        _setTokenURI(newTicketId, metadataURI);
 
-    constructor() ERC721("EventTicket", "ET") Ownable(msg.sender) {}
+        address[] memory emptyOwners;
 
-    function _getTokenId(string memory uniqueID) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(uniqueID)));
-    }
-
-    function exists(uint256 tokenId) public view returns (bool) {
-        return _ownerOf(tokenId) != address(0);
-    }
-
-    function mintTicket(
-        address to,
-        string memory uri,
-        string memory eventDetails,
-        uint256 originalPrice,
-        uint256 expirationDate,
-        string memory uniqueID
-    ) public onlyOwner whenNotPaused {
-        require(bytes(uniqueID).length > 0, "Empty ID");
-        require(bytes(uri).length > 0, "Empty URI");
-        require(expirationDate > block.timestamp, "Invalid expiration");
-        require(to != address(0), "Zero address");
-
-        uint256 tokenId = _getTokenId(uniqueID);
-        require(!exists(tokenId), "Token exists");
-
-        _safeMint(to, tokenId);
-        _setTokenURI(tokenId, uri);
-
-        address[] memory history;
-        tickets[uniqueID] = Ticket({
-            owner: to,
-            eventDetails: eventDetails,
-            originalPrice: originalPrice,
-            expirationDate: expirationDate,
-            maxResalePrice: originalPrice,
-            metadataURI: uri,
-            ownershipHistory: history
+        ticketRecords[newTicketId] = TicketInfo({
+            eventInfo: eventInfo,
+            basePrice: basePrice,
+            expiryTimestamp: expiryTimestamp,
+            pastOwners: emptyOwners,
+            usedStatus: false
         });
-        tickets[uniqueID].ownershipHistory.push(to);
 
-        emit TicketMinted(uniqueID, to, eventDetails, originalPrice, expirationDate);
+        ticketRecords[newTicketId].pastOwners.push(recipient);
+
+        emit TicketMinted(newTicketId, recipient, eventInfo, basePrice, expiryTimestamp);
     }
 
-    function transferTicket(
-        string memory uniqueID,
-        address to,
-        uint256 resalePrice
-    ) public payable nonReentrant whenNotPaused {
-        require(to != address(0), "Zero address");
-        Ticket storage ticket = tickets[uniqueID];
-        require(ticket.owner == msg.sender, "Not owner");
-        require(block.timestamp < ticket.expirationDate, "Expired");
-        require(resalePrice <= ticket.maxResalePrice, "Price too high");
-        require(msg.value >= resalePrice, "Insufficient payment");
+    /**
+     * @notice Validates a ticket for entry to the event
+     * @param ticketId ID of the ticket to be validated
+     */
+    function validateTicket(uint256 ticketId) public override {
+        _requireOwned(ticketId);
+        require(!ticketRecords[ticketId].usedStatus, "Ticket already used");
+        require(_isTicketValid(ticketId), "Ticket has expired");
 
-        uint256 tokenId = _getTokenId(uniqueID);
-        uint256 royaltyAmount = (resalePrice * royaltyPercentage) / 100;
-        
-        // State changes before external calls
-        ticket.owner = to;
-        ticket.ownershipHistory.push(to);
-        _transfer(msg.sender, to, tokenId);
-
-        // Safe transfers
-        (bool sentRoyalty, ) = payable(owner()).call{value: royaltyAmount}("");
-        (bool sentPayment, ) = payable(msg.sender).call{value: resalePrice - royaltyAmount}("");
-        require(sentRoyalty && sentPayment, "Transfer failed");
-
-        // Return excess payment
-        if (msg.value > resalePrice) {
-            (bool sentExcess, ) = payable(msg.sender).call{value: msg.value - resalePrice}("");
-            require(sentExcess, "Excess return failed");
-        }
-
-        emit TicketTransferred(uniqueID, msg.sender, to, resalePrice);
+        ticketRecords[ticketId].usedStatus = true;
+        emit TicketValidated(ticketId, msg.sender);
     }
 
-    function mintPaidTicket(
-        address to,
-        string memory uri,
-        string memory eventDetails,
-        uint256 price,
-        uint256 expirationDate,
-        string memory uniqueID
-    ) public payable nonReentrant whenNotPaused {
-        require(msg.value >= price, "Insufficient payment");
-        require(bytes(uniqueID).length > 0, "Empty ID");
-        require(bytes(uri).length > 0, "Empty URI");
-        require(to != address(0), "Zero address");
-        require(expirationDate > block.timestamp, "Invalid expiration");
-
-        uint256 tokenId = _getTokenId(uniqueID);
-        require(!exists(tokenId), "Token exists");
-
-        _safeMint(to, tokenId);
-        _setTokenURI(tokenId, uri);
-
-        address[] memory history;
-        tickets[uniqueID] = Ticket({
-            owner: to,
-            eventDetails: eventDetails,
-            originalPrice: price,
-            expirationDate: expirationDate,
-            maxResalePrice: price,
-            metadataURI: uri,
-            ownershipHistory: history
-        });
-        tickets[uniqueID].ownershipHistory.push(to);
-
-        (bool sent, ) = payable(owner()).call{value: price}("");
-        require(sent, "Payment failed");
-
-        if (msg.value > price) {
-            (bool sentExcess, ) = payable(msg.sender).call{value: msg.value - price}("");
-            require(sentExcess, "Excess return failed");
-        }
-
-        emit TicketMinted(uniqueID, to, eventDetails, price, expirationDate);
+    /**
+     * @notice Returns previous owners of a ticket
+     * @param ticketId ID of the ticket
+     */
+    function getTicketHistory(uint256 ticketId) public view override returns (address[] memory) {
+        _requireOwned(ticketId);
+        return ticketRecords[ticketId].pastOwners;
     }
 
-    // Admin functions
-    function updateTokenURI(uint256 tokenId, string memory newURI) public onlyOwner {
-        require(exists(tokenId), "Nonexistent token");
-        _setTokenURI(tokenId, newURI);
-        emit TicketMetadataUpdated(tokenId, newURI);
+    /**
+     * @notice Returns both used and validity status of the ticket
+     * @param ticketId ID of the ticket
+     */
+    function getTicketStatus(uint256 ticketId) public view override returns (bool used, bool valid) {
+        _requireOwned(ticketId);
+        used = ticketRecords[ticketId].usedStatus;
+        valid = _isTicketValid(ticketId);
     }
 
-    function setRoyaltyInfo(address receiver, uint96 feeBasisPoints) external onlyOwner {
-        _setDefaultRoyalty(receiver, feeBasisPoints);
-        emit RoyaltyInfoChanged(receiver, feeBasisPoints);
+    /**
+     * @notice Allows the contract owner to update ticket event info and metadata
+     * @param ticketId ID of the ticket
+     * @param updatedEventInfo New description of the event
+     * @param updatedURI New metadata URI
+     */
+    function updateTicketMetadata(uint256 ticketId, string memory updatedEventInfo, string memory updatedURI) public override onlyOwner {
+        _requireOwned(ticketId);
+        ticketRecords[ticketId].eventInfo = updatedEventInfo;
+        _setTokenURI(ticketId, updatedURI);
+        emit TicketMetadataUpdated(ticketId, updatedEventInfo, updatedURI);
     }
 
-    function setRoyaltyPercentage(uint256 _percentage) public onlyOwner {
-        require(_percentage <= 20, "Max 20%");
-        royaltyPercentage = _percentage;
-        emit RoyaltyPercentageChanged(_percentage);
+    /**
+     * @notice Allows the contract owner to set a maximum resale price
+     * @param ticketId ID of the ticket
+     * @param limitPrice New price limit
+     */
+    function setMaxResalePrice(uint256 ticketId, uint256 limitPrice) public override onlyOwner {
+        _requireOwned(ticketId);
+        resalePriceLimit[ticketId] = limitPrice;
+        emit TicketMaxResalePriceSet(ticketId, limitPrice);
     }
 
-    function pause() public onlyOwner {
-        _pause();
+    /**
+     * @notice Burns a ticket if it has expired
+     * @param ticketId ID of the ticket
+     */
+    function burnExpiredTickets(uint256 ticketId) public override onlyOwner {
+        _requireOwned(ticketId);
+        require(!_isTicketValid(ticketId), "Ticket is still valid");
+        _burn(ticketId);
+        emit TicketExpired(ticketId);
     }
 
-    function unpause() public onlyOwner {
-        _unpause();
+    /**
+     * @notice Transfers ticket and updates its ownership history
+     * @param sender Current owner
+     * @param receiver New owner
+     * @param ticketId ID of the ticket
+     */
+    function transferWithHistoryUpdate(address sender, address receiver, uint256 ticketId) public override onlyOwner {
+        _requireOwned(ticketId);
+        require(sender != address(0) && receiver != address(0), "Invalid address");
+        require(sender == ownerOf(ticketId), "Not the token owner");
+
+        ticketRecords[ticketId].pastOwners.push(receiver);
+        _transfer(sender, receiver, ticketId);
+        emit TicketTransferred(ticketId, sender, receiver);
     }
 
+    /**
+     * @notice Checks if a ticket is still valid (not expired or used)
+     * @param ticketId ID of the ticket
+     */
+    function _isTicketValid(uint256 ticketId) internal view returns (bool) {
+        return (block.timestamp <= ticketRecords[ticketId].expiryTimestamp && !ticketRecords[ticketId].usedStatus);
+    }
+
+    /**
+     * @dev Overrides tokenURI function from inherited contracts
+     */
+    function tokenURI(uint256 ticketId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (string memory)
+    {
+        return super.tokenURI(ticketId);
+    }
+
+    /**
+     * @dev Overrides supportsInterface for interface detection
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        virtual
-        override(ERC721URIStorage, ERC2981)
+        override(ERC721, ERC721URIStorage)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
     }
-
-    
 }
