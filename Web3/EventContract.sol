@@ -175,4 +175,13 @@ contract EventContract is ERC721, ERC721URIStorage, ERC721Burnable, Ownable, IEv
     {
         return super.supportsInterface(interfaceId);
     }
+
+    function approve(address to, uint256 tokenId) public virtual override(ERC721, IERC721)  {
+        revert("Approvals are disabled");
+    }
+
+    function setApprovalForAll(address operator, bool approved) public virtual override(ERC721, IERC721)  {
+        revert("Approvals are disabled");
+    }
+
 }
