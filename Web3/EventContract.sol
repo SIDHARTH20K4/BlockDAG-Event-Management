@@ -22,8 +22,8 @@ contract EventContract is ERC721, ERC721URIStorage, ERC721Burnable, Ownable, IEv
     mapping(uint256 => uint256) public resalePriceLimit;
 
     constructor(address contractOwner) ERC721("EventChainTickets", "ECT") {
-        // require(contractOwner != address(0), "Invalid owner address");
-        // _transferOwnership(contractOwner);
+        require(contractOwner != address(0), "Invalid owner address");
+        _transferOwnership(contractOwner);
     }
 
     function safeMint(address to, string memory uri, string memory eventDetails, uint256 originalPrice, uint256 expirationDate) external override {
