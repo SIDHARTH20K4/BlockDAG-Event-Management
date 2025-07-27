@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './CreateEventForm.css';
+import { useCreateEvent } from '../constants/Connections'; // ✅ Adjust path as needed
 
 const CreateEventForm = ({ addEvent }) => {
   const [formData, setFormData] = useState({
@@ -15,6 +16,7 @@ const CreateEventForm = ({ addEvent }) => {
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const { createEvent, isPending, isSuccess, error } = useCreateEvent();
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -34,7 +36,10 @@ const CreateEventForm = ({ addEvent }) => {
     }
 
     setLoading(true);
+    setMessage('');
+
     try {
+      // Upload image to IPFS
       const imageData = new FormData();
       imageData.append('file', formData.imageFile);
 
@@ -49,13 +54,29 @@ const CreateEventForm = ({ addEvent }) => {
       const imageUrl = `https://gateway.pinata.cloud/ipfs/${data.ipfsHash}`;
       const epochEnd = Math.floor(new Date(`${formData.date}T23:59:59`).getTime() / 1000);
 
+      // ✅ Pass ONLY the required 4 fields to smart contract
+      createEvent({
+        title: formData.title,
+        location: formData.location,
+        date: formData.date,
+        price: (formData.price),
+      });
+
+      // ✅ Keep the rest of the fields (optional) for frontend/display/IPFS
+      console.log('Extra metadata (frontend/IPFS only):', {
+        description: formData.description,
+        hostName: formData.hostName,
+        hostContact: formData.hostContact,
+        image: imageUrl,
+        ipfsCid: data.ipfsHash,
+        epochEnd,
+      });
       const eventData = {
         ...formData,
         image: imageUrl,
         ipfsCid: data.ipfsHash,
         epochEnd,
       };
-
       addEvent(eventData);
       setMessage(' Event created successfully!');
       setFormData({
@@ -68,9 +89,20 @@ const CreateEventForm = ({ addEvent }) => {
         hostContact: '',
         imageFile: null,
       });
+      setMessage('📤 Event submitted to blockchain!');
+      setFormData({
+        title: '',
+        description: '',
+        date: '',
+        location: '',
+        price: '',
+        hostName: '',
+        hostContact: '',
+        imageFile: null,
+      });
     } catch (err) {
       console.error('Upload error:', err);
-      setMessage('❌ Failed to upload to IPFS.');
+      setMessage('❌ Failed to create event.');
     } finally {
       setLoading(false);
     }
@@ -81,6 +113,10 @@ const CreateEventForm = ({ addEvent }) => {
       <div className="create-event-container">
         <h2 className="form-title">Create New Event</h2>
         {message && <p className="text-center mb-4 font-medium text-purple-600">{message}</p>}
+        {isPending && <p className="text-yellow-500 text-sm">⏳ Waiting for transaction...</p>}
+        {isSuccess && <p className="text-green-600 text-sm">✅ Event created on-chain!</p>}
+        {error && <p className="text-red-500 text-sm">❌ {error.message}</p>}
+
         <form onSubmit={handleSubmit} className="create-event-form">
           {[
             { label: 'Title', name: 'title' },
@@ -115,8 +151,8 @@ const CreateEventForm = ({ addEvent }) => {
             />
           </div>
 
-          <button type="submit" disabled={loading}>
-            {loading ? 'Uploading...' : 'Create Event'}
+          <button type="submit" disabled={loading || isPending}>
+            {loading ? 'Uploading...' : isPending ? 'Creating on-chain...' : 'Create Event'}
           </button>
         </form>
       </div>
