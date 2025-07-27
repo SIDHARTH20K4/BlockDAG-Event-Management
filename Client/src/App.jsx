@@ -7,6 +7,8 @@ import Navbar from './components/Navbar';
 import HeroSection from './components/HeroSection';
 import { v4 as uuidv4 } from 'uuid';
 
+import Connect from './components/ConnectButton';
+
 const App = () => {
   const initialEvents = [
     {
@@ -48,6 +50,7 @@ const App = () => {
 
   return (
     <>
+      <Connect/>
       <Navbar />
       <Routes>
         <Route

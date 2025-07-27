@@ -5,7 +5,7 @@ const multer = require("multer");
 const cors = require("cors");
 const axios = require("axios");
 const fs = require("fs");
-const FormData = require("form-data"); // ← this was missing!
+const FormData = require("form-data"); 
 
 const app = express();
 app.use(cors());
@@ -21,7 +21,7 @@ app.post("/upload-to-ipfs", upload.single("file"), async (req, res) => {
     const response = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", data, {
       maxBodyLength: "Infinity",
       headers: {
-        ...data.getHeaders(), // ← THIS is correct
+        ...data.getHeaders(), 
         pinata_api_key: process.env.PINATA_API_KEY,
         pinata_secret_api_key: process.env.PINATA_SECRET_KEY,
       },
@@ -49,4 +49,4 @@ app.post("/upload-to-ipfs", upload.single("file"), async (req, res) => {
 
 });
 
-app.listen(5000, () => console.log("✅ Server running on http://localhost:5000"));
+app.listen(5000, () => console.log(" Server running on http://localhost:5000"));
