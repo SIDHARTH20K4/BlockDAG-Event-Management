@@ -2,7 +2,7 @@
 
 ## Overview
 
-**EventChain** is a decentralized event management system leveraging Ethereum-compatible blockchain smart contracts. It enables event organizers to create events, mint NFT-based tickets with ownership histories, and transfer event ownership securely and transparently.
+**TicketMaster** is a decentralized event management system leveraging Ethereum-compatible blockchain smart contracts. It enables event organizers to create events, mint NFT-based tickets with ownership histories, and transfer event ownership securely and transparently.
 
 The system consists of:
 
@@ -11,6 +11,8 @@ The system consists of:
 - Interface contracts (`IEventManager.sol`, `IEventContract.sol`) to enforce clear modular boundaries.
 
 Additional backend and frontend components enable decentralized metadata storage via IPFS and user-friendly interaction through React-based UI.
+
+### **All contracts and related dApp components are deployed and operated on the BlockDAG Primordial Testnet**, leveraging its EVM compatibility, high throughput, and scalable architecture to provide a fast and efficient decentralized event management experience.
 
 ## Table of Contents
 
