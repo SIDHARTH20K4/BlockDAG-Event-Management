@@ -151,4 +151,4 @@ This project is licensed under the MIT License.
 
 ---
 
-**Happy building with EventChain — empowering decentralized events!**
+**Happy building with TicketMaster — empowering decentralized events!**
