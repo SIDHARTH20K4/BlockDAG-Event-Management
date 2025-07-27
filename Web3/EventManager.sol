@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./IEventChainContract.sol";
-import "./IEventChainEventManagerContract.sol";
+import "./IEventContract.sol";
+import "./IEventManager.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
- * @title EventChainEventManagerContract
+ * @title EventManager
  * @dev This contract allows organizers to create events, mint tickets, and transfer event ownership.
  *      The contract is managed by the owner who also controls the address of the EventChainContract.
  */
-contract EventManager is Ownable, IEventChainEventManagerContract {
+contract EventManager is Ownable, IEventManager {
 
     uint256 private eventIdCounter; // Counter to assign unique IDs to events
 
@@ -44,12 +44,7 @@ contract EventManager is Ownable, IEventChainEventManagerContract {
      * @param date The scheduled date of the event.
      * @param ticketPrice The cost of one ticket for the event.
      */
-    function createEvent(
-        string memory name,
-        string memory location,
-        string memory date,
-        uint256 ticketPrice
-    ) public override {
+    function createEvent(string memory name, string memory location, string memory date, uint256 ticketPrice) public override {
         uint256 eventId = eventIdCounter;
         eventIdCounter += 1;
 
@@ -81,18 +76,13 @@ contract EventManager is Ownable, IEventChainEventManagerContract {
      * @param uri The metadata URI associated with the ticket.
      * @param endDate The end date for the ticket’s validity.
      */
-    function mintTicket(
-        uint256 eventId,
-        address to,
-        string memory uri,
-        uint256 endDate
-    ) public override {
+    function mintTicket(uint256 eventId, address to, string memory uri, uint256 endDate) public override {
         require(eventId < eventIdCounter, "Event does not exist");
         require(eventRegistry[eventId].organizer == msg.sender, "Only organizer can mint");
         require(eventChainContract != address(0), "EventChainContract not set");
         require(address(this).balance == 0, "Cannot mint with pending balance");
 
-        IEventChainContract chain = IEventChainContract(eventChainContract);
+        IEventContract chain = IEventContract(eventChainContract);
         chain.safeMint(to, uri, eventRegistry[eventId].name, eventRegistry[eventId].ticketPrice, endDate);
     }
 
@@ -101,7 +91,7 @@ contract EventManager is Ownable, IEventChainEventManagerContract {
      * @param eventId The ID of the event to transfer.
      * @param to The new organizer's address.
      */
-    function transferEvent(uint256 eventId, address to) external onlyOwner {
+    function transferEvent(uint256 eventId, address to) external {
         Event storage currentEvent = eventRegistry[eventId];
         require(currentEvent.organizer == msg.sender, "Only organizer can transfer");
 
@@ -109,3 +99,4 @@ contract EventManager is Ownable, IEventChainEventManagerContract {
         emit EventTransferred(eventId, msg.sender, to);
     }
 }
+//0xE37e93Dadb4e72b89885A1fDC85ec1ae527e73eE

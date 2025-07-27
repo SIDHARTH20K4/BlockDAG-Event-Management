@@ -5,9 +5,9 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.9.3/contr
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.9.3/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.9.3/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.9.3/contracts/access/Ownable.sol";
-import "./IEventChainContract.sol";
+import "./IEventContract.sol";
 
-contract EventContract is ERC721, ERC721URIStorage, ERC721Burnable, Ownable, IEventChainContract {
+contract EventContract is ERC721, ERC721URIStorage, ERC721Burnable, Ownable, IEventContract {
     uint256 private ticketIdCounter;
 
     struct TicketInfo {
@@ -135,5 +135,7 @@ contract EventContract is ERC721, ERC721URIStorage, ERC721Burnable, Ownable, IEv
 
     function setApprovalForAll(address operator, bool approved) public override(ERC721, IERC721) {
         revert("Approvals disabled");
-    }
+    } 
 }
+
+//0x7087374beB22f3021096542F0dF409062522db0b
