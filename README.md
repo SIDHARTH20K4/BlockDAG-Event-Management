@@ -5,8 +5,8 @@ TicketMaster is a decentralized event ticketing application built on the BlockDA
 ## 🌐 BlockDAG Deployment
 
 - **Blockchain**: BlockDAG
-- **Smart Contract Address**: `0xYourContractAddressHere`  
-  *(Replace this with your actual deployed address)*
+- **EventContract**: `0x7087374beB22f3021096542F0dF409062522db0b`  
+- **EventManager**: `0xE37e93Dadb4e72b89885A1fDC85ec1ae527e73eE`  
 - **Deployed via**: [BlockDAG Testnet Explorer](https://testnet.blockdag.io/explorer)
 
 ## ⚙️ Project Workflow
