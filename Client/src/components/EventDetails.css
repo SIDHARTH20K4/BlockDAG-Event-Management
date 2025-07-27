@@ -1,63 +1,135 @@
 .event-details-container {
-  max-width: 1000px; /* increased */
+  width: 90%;
+  max-width: 900px;
   margin: 2rem auto;
-  background: #ffffff;
+  background-color: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-  font-family: 'Segoe UI', sans-serif;
-}
-
-.event-details-content {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 2rem;
+}
+.event-details-image-wrapper {
+  text-align: center;
 }
 
 .event-detail-image {
-  flex: 1;
-  width: auto;
-  max-width: 100%;
-  max-height: 600px; /* increased */
-  object-fit: cover;
+  width: 100%;
+  max-height: 400px;
+  object-fit: contain; 
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease;
+}
+
+.event-detail-image:hover {
+  transform: scale(1.01);
+}
+
+.event-details-text h2 {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 0.75rem;
+  color: #1a1a1a;
+}
+
+.event-details-text p {
+  font-size: 1rem;
+  color: #444;
+  margin: 0.5rem 0;
+ 
+}
+
+.qr-code-wrapper {
+  text-align: center;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 .event-details-buttons {
   display: flex;
+  justify-content: space-between;
   gap: 1rem;
-  justify-content: center; /* ✅ centers the buttons */
-  margin-top: 2rem;
+  margin-top: 1rem;
 }
 
 .event-details-buttons button {
-  padding: 0.95rem 1.5rem;
-  background: #7c3aed;
-  color: #ffffff;
-  border: none;
-  border-radius: 6px;
+  flex: 1;
+  padding: 0.75rem;
   font-size: 1rem;
+  border: none;
+  border-radius: 10px;
+  background-color: #4f46e5;
+  color: white;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition: background-color 0.2s ease;
 }
 
 .event-details-buttons button:hover {
-  background: #5b21b6;
-  transform: translateY(-2px);
+  background-color: #4338ca;
+}
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(30, 30, 30, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
 }
 
-@media (max-width: 768px) {
-  .event-details-content {
-    flex-direction: column;
-    align-items: center;
-  }
-  .event-details-image-wrapper,
-  .event-details-text {
-    max-width: 100%;
-    flex: 1 1 100%;
-  }
+.modal-content {
+  position: relative;
+  background: white;
+  padding: 1rem;
+  border-radius: 12px;
+  max-width: 90%;
+  max-height: 90%;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.4);
+  overflow: auto;
+}
+
+.modal-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+}
+
+.close-modal {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-size: 2rem;
+  color: #333;
+  cursor: pointer;
+  font-weight: bold;
+  transition: color 0.2s ease;
+}
+
+.close-modal:hover {
+  color: #e11d48;
+}
+
+@media (max-width: 600px) {
   .event-details-buttons {
-    justify-content: center;
-    flex-wrap: wrap;
+    flex-direction: column;
+  }
+
+  .event-detail-image {
+    max-height: 250px;
+  }
+
+  .event-details-text h2 {
+    font-size: 1.5rem;
+  }
+
+  .event-details-text p {
+    font-size: 0.95rem;
   }
 }
